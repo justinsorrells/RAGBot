@@ -95,6 +95,41 @@ def test_document_can_be_reindexed_from_its_stored_source(client, test_settings)
     assert "driver coordination" in chat.json()["sources"][0]["chunk_text"]
 
 
+def test_delete_nonexistent_document_returns_404(client) -> None:
+    """Deleting an unknown document should return a not found response."""
+
+    response = client.delete("/documents/does-not-exist")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Document not found."
+
+
+def test_reindex_nonexistent_document_returns_404(client) -> None:
+    """Reindexing an unknown document should return a not found response."""
+
+    response = client.post("/documents/does-not-exist/reindex")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Document not found."
+
+
+def test_reindex_returns_400_when_the_stored_source_file_is_missing(client, test_settings) -> None:
+    """Reindexing should surface a clear validation error when the source file is gone."""
+
+    upload = client.post(
+        "/documents",
+        files={"file": ("roadie.txt", b"Roadie supports local delivery.", "text/plain")},
+    )
+    document_id = upload.json()["document_id"]
+    stored_path = Path(test_settings.document_store_path) / f"{document_id}.txt"
+    stored_path.unlink()
+
+    response = client.post(f"/documents/{document_id}/reindex")
+
+    assert response.status_code == 400
+    assert "is missing" in response.json()["detail"]
+
+
 def test_upload_rejects_unsupported_files(client) -> None:
     """Unsupported file uploads should return a 400 response."""
 
