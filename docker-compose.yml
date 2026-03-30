@@ -8,6 +8,7 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/data/ragbot.db
       FAISS_INDEX_PATH: /app/data/faiss_index
+      DOCUMENT_STORE_PATH: /app/data/document_store
       OLLAMA_BASE_URL: http://host.docker.internal:11434
     volumes:
       - ./data:/app/data

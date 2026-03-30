@@ -49,6 +49,7 @@ def build_test_service(settings: Settings) -> tuple[RAGService, object]:
         indexer=indexer,
         retriever=retriever,
         llm_client=FakeLLMClient(),
+        document_store_path=settings.document_store,
         default_top_k=settings.default_top_k,
     )
     return service, engine

@@ -31,6 +31,7 @@ def build_rag_service(settings: Settings) -> tuple[RAGService, Engine]:
         indexer=indexer,
         retriever=retriever,
         llm_client=llm_client,
+        document_store_path=settings.document_store,
         default_top_k=settings.default_top_k,
     )
     return service, engine

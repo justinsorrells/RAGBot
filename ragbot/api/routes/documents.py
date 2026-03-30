@@ -1,9 +1,9 @@
-"""Document upload and listing routes."""
+"""Document upload, listing, and management routes."""
 
 import asyncio
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, ConfigDict
 
 from ragbot.api.dependencies import get_rag_service
@@ -48,3 +48,33 @@ async def list_documents(rag_service: RAGService = Depends(get_rag_service)) -> 
 
     records = await asyncio.to_thread(rag_service.list_documents)
     return [DocumentResponse.model_validate(record) for record in records]
+
+
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_document(
+    document_id: str,
+    rag_service: RAGService = Depends(get_rag_service),
+) -> Response:
+    """Delete an indexed document, remove its stored file, and rebuild the vector index."""
+
+    deleted = await asyncio.to_thread(rag_service.delete_document, document_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{document_id}/reindex", response_model=DocumentResponse)
+async def reindex_document(
+    document_id: str,
+    rag_service: RAGService = Depends(get_rag_service),
+) -> DocumentResponse:
+    """Rebuild the FAISS index for the stored document library and refresh chunk counts."""
+
+    try:
+        record = await asyncio.to_thread(rag_service.reindex_document, document_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+    return DocumentResponse.model_validate(record)

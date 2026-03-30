@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     database_url: str = "sqlite:///./ragbot.db"
     faiss_index_path: str = "./faiss_index"
+    document_store_path: str = "./document_store"
     llm_provider: str = "auto"
     openai_api_key: str | None = None
     openai_embedding_model: str = "text-embedding-3-small"
@@ -34,6 +35,12 @@ class Settings(BaseSettings):
         """Return the FAISS index path as a ``Path`` object."""
 
         return Path(self.faiss_index_path)
+
+    @property
+    def document_store(self) -> Path:
+        """Return the stored-source directory as a ``Path`` object."""
+
+        return Path(self.document_store_path)
 
 
 @lru_cache(maxsize=1)

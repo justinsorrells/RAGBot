@@ -9,6 +9,7 @@ This project is useful when you want a simple local RAG stack that demonstrates 
 - Upload plain-text and PDF documents with `POST /documents`
 - Persist chunk embeddings in a local FAISS index
 - Persist document metadata in SQLite
+- Delete or re-index stored documents from the document library
 - Ask grounded questions with `POST /chat`
 - Return source chunks with every answer
 - Swap between OpenAI and Ollama via environment variables
@@ -113,6 +114,7 @@ Important variables:
 
 - `DATABASE_URL`: SQLite location
 - `FAISS_INDEX_PATH`: directory used for persisted FAISS files
+- `DOCUMENT_STORE_PATH`: directory used for persisted uploaded source files
 - `LLM_PROVIDER`: `auto`, `openai`, or `ollama`
 - `OPENAI_API_KEY`: required for OpenAI mode
 - `OLLAMA_BASE_URL`: Ollama server URL
@@ -137,6 +139,18 @@ List indexed documents:
 
 ```bash
 curl http://127.0.0.1:8000/documents
+```
+
+Re-index a stored document:
+
+```bash
+curl -X POST http://127.0.0.1:8000/documents/<document_id>/reindex
+```
+
+Delete a stored document:
+
+```bash
+curl -X DELETE http://127.0.0.1:8000/documents/<document_id>
 ```
 
 Ask a question:

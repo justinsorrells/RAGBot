@@ -1,5 +1,7 @@
 """Route integration tests."""
 
+from pathlib import Path
+
 
 def test_routes_support_upload_listing_chat_and_health(client) -> None:
     """The main API flow should work end to end for text uploads."""
@@ -39,6 +41,58 @@ def test_routes_support_upload_listing_chat_and_health(client) -> None:
     health_after = client.get("/health")
     assert health_after.status_code == 200
     assert health_after.json()["documents_indexed"] == 1
+
+
+def test_document_can_be_deleted_and_removed_from_retrieval(client) -> None:
+    """Deleting a document should rebuild the index without its chunks."""
+
+    upload = client.post(
+        "/documents",
+        files={
+            "file": (
+                "roadie.txt",
+                b"Roadie coordinates same-day delivery for retailers and local logistics teams.",
+                "text/plain",
+            )
+        },
+    )
+    document_id = upload.json()["document_id"]
+
+    delete_response = client.delete(f"/documents/{document_id}")
+    assert delete_response.status_code == 204
+
+    listing = client.get("/documents")
+    assert listing.status_code == 200
+    assert listing.json() == []
+
+    chat = client.post("/chat", json={"question": "What does Roadie coordinate?"})
+    assert chat.status_code == 200
+    assert chat.json()["sources"] == []
+
+
+def test_document_can_be_reindexed_from_its_stored_source(client, test_settings) -> None:
+    """Reindexing should refresh retrieval from the stored source file on disk."""
+
+    upload = client.post(
+        "/documents",
+        files={"file": ("roadie.txt", b"Roadie delivers packages for merchants.", "text/plain")},
+    )
+    upload_payload = upload.json()
+    document_id = upload_payload["document_id"]
+
+    stored_path = Path(test_settings.document_store_path) / f"{document_id}.txt"
+    stored_path.write_text(
+        "Roadie provides same-day delivery software and driver coordination for local commerce.",
+        encoding="utf-8",
+    )
+
+    reindex = client.post(f"/documents/{document_id}/reindex")
+    assert reindex.status_code == 200
+    assert reindex.json()["document_id"] == document_id
+
+    chat = client.post("/chat", json={"question": "What does Roadie provide?"})
+    assert chat.status_code == 200
+    assert "driver coordination" in chat.json()["sources"][0]["chunk_text"]
 
 
 def test_upload_rejects_unsupported_files(client) -> None:

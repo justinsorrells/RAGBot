@@ -15,6 +15,7 @@ def test_settings(tmp_path) -> Settings:
     return Settings(
         database_url=f"sqlite:///{tmp_path / 'ragbot.db'}",
         faiss_index_path=str(tmp_path / "faiss_index"),
+        document_store_path=str(tmp_path / "document_store"),
         llm_provider="ollama",
         default_top_k=3,
     )

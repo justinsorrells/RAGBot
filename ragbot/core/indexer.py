@@ -57,6 +57,12 @@ class PersistentVectorIndex:
                 allow_dangerous_deserialization=True,
             )
 
+    def _clear_persisted_index(self) -> None:
+        for filename in ("index.faiss", "index.pkl"):
+            file_path = self.index_path / filename
+            if file_path.exists():
+                file_path.unlink()
+
     def add_documents(self, documents: Sequence[Document]) -> None:
         """Add documents to the FAISS index and persist the updated store."""
 
@@ -77,6 +83,18 @@ class PersistentVectorIndex:
             if self._store is None:
                 return []
             return self._store.similarity_search(query, k=k)
+
+    def rebuild(self, documents: Sequence[Document]) -> None:
+        """Replace the current FAISS index contents and persist the new state."""
+
+        with self._lock:
+            if not documents:
+                self._store = None
+                self._clear_persisted_index()
+                return
+
+            self._store = FAISS.from_documents(list(documents), self.embeddings)
+            self._store.save_local(str(self.index_path))
 
 
 class DocumentIndexer:
